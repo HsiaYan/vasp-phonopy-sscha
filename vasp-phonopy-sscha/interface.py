@@ -85,6 +85,7 @@ class DynamicalMatrixArray():
         self.atomic_positions = []                              #list that contains 3 string for each entry. Each string is an atomic position
         self.header = None
 
+
     def get_masses(self):
         for atom in self.unit_cell_atoms:
             self.mass_atoms.append(elements_dict.get(atom))
@@ -104,69 +105,49 @@ class DynamicalMatrixArray():
             self.cell = POS.readlines()
             self.supercell_multiplier = self.cell[1].strip()
             self.supercell_multiplier = float(self.supercell_multiplier)*angstrom_to_bohr
-            self.basis_vectors.append(list(map(float, re.findall("[0-9\.]+", self.cell[2]))))
-            self.basis_vectors.append(list(map(float, re.findall("[0-9\.]+", self.cell[3]))))
-            self.basis_vectors.append(list(map(float, re.findall("[0-9\.]+", self.cell[4]))))
+            self.basis_vectors.append(list(map(float, re.findall("[0-9\.\-]+", self.cell[2]))))
+            self.basis_vectors.append(list(map(float, re.findall("[0-9\.\-]+", self.cell[3]))))
+            self.basis_vectors.append(list(map(float, re.findall("[0-9\.\-]+", self.cell[4]))))
             self.type_atoms = re.findall("[A-Za-z]+", self.cell[5])
             self.atom_occurencies = list(map(int, re.findall("[0-9]+", self.cell[6])))
             self.n_atoms = sum(self.atom_occurencies)
-            
-# bug! There are POSCAR files that sep does not recognize
-#         self.supercell_multiplier = pd.read_csv("POSCAR", engine='python', skiprows=1, nrows=1, header=None).values.tolist()[0]
-#         self.supercell_multiplier = float(self.supercell_multiplier[0])*angstrom_to_bohr
-#         self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=2, nrows=1, header=None).values.tolist()[0])
-#         self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=3, nrows=1, header=None).values.tolist()[0])
-#         self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=4, nrows=1, header=None).values.tolist()[0])
-#         self.type_atoms = pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=5, nrows=1, header=None).values.tolist()[0]
-#         self.atom_occurencies = pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=6, nrows=1, header=None).values.tolist()[0]
 
-        
-#        for index in range(len(self.atom_occurencies)):
-#            self.n_atoms += self.atom_occurencies[index]
         for index in range(len(self.type_atoms)):
             for indey in range(self.atom_occurencies[index]):
                 self.unit_cell_atoms.append(self.type_atoms[index])
         for index in [x.strip() for x in self.cell[8:] if x.strip() != '']:
-            self.atomic_positions.append(list(map(float, re.findall("[0-9\.]+", i)))) 
-#         for index in range(self.n_atoms):
-#             self.atomic_positions.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=8+index, nrows=1, header=None).values.tolist()[0])
+            self.atomic_positions.append(list(map(float, re.findall("[0-9\.]+", index)))) 
         self.get_masses()
         self.header = header(self.supercell_multiplier, self.atomic_positions, self.basis_vectors)
         print(f" Supercell multiplier: {self.supercell_multiplier} \n basis_vectors: {self.basis_vectors} \n type_atoms: {self.type_atoms} \n atom_occurencies: {self.atom_occurencies} \n unit_cell_atoms: \n{self.unit_cell_atoms} \n atomic_positions: {self.atomic_positions} \n n_atoms: {self.n_atoms}")
 
     def matrix_reading(self):
-            self.dynamical_matrix = (pd.read_csv(str(1) + ".txt", engine='python', sep="\s+", skiprows=9, nrows=3*self.n_atoms, header=None))
+        with open("1.txt", "r", newline="") as txt1:
+            self.dynamical = txt1.readlines()
+            for index in [x.strip() for x in self.dynamical[9:9+3*self.n_atoms] if x.strip() != '']:
+                self.dynamical_matrix.append(list(map(float, re.findall("[0-9\.\-]+", index[1:]))))
 
     def matrix_formatting(self):
-            self.dynamical_matrix = self.dynamical_matrix.drop(0, 1)
-            self.dynamical_matrix = self.dynamical_matrix.drop(1, 1)
-            self.dynamical_matrix = self.dynamical_matrix.iloc[:, :-1]
-            self.dynamical_matrix[:] = self.dynamical_matrix[:].replace({']': ''}, regex=True)
-            self.dynamical_matrix[:] = self.dynamical_matrix[:].replace({',': ''}, regex=True)
-            self.dynamical_matrix.columns = range(self.dynamical_matrix.shape[1])
-            for col in self.dynamical_matrix:
-                self.dynamical_matrix[col] = self.dynamical_matrix[col].astype(np.float32)
-                self.dynamical_matrix[col] = self.dynamical_matrix[col].round(decimals=6)
-            self.dynamical_matrix = self.dynamical_matrix #/ (15.633302 * 15.633302)
-            #print(self.dynamical_matrix)
-            self.dynamical_matrix = self.dynamical_matrix.to_numpy()
+        self.dynamical_matrix = np.array(self.dynamical_matrix)
+        print(self.dynamical_matrix)
+            
 
     def matrix_complexifier(self):
         #print(self.dynamical_matrix)
         self.dynamical_matrix_complex = np.array(self.dynamical_matrix[:, ::2] + 1j*self.dynamical_matrix[:, ::2], dtype=complex)
-
+        print(self.dynamical_matrix_complex)
+        
     def print_matrix_complex(self):
-        #for i in range(0, self.n_kpoints):
-        #print(self.dynamical_matrix_complex)
         print("")
 
     def write_dyn(self):
         # !!! read rec latt vectors
-        aa=pd.read_csv("1.txt", engine='python', sep="   | |,", skiprows=3, nrows=3, header=None)
+        with open("1.txt", "r", newline="") as txt1:
+            self.b123 = txt1.readlines()
+            b1 = np.array(list(map(float, re.findall("[0-9\.\-]+", self.b123[3][1:])))) * self.supercell_multiplier / angstrom_to_bohr
+            b2 = np.array(list(map(float, re.findall("[0-9\.\-]+", self.b123[4][1:])))) * self.supercell_multiplier / angstrom_to_bohr
+            b3 = np.array(list(map(float, re.findall("[0-9\.\-]+", self.b123[5][1:])))) * self.supercell_multiplier / angstrom_to_bohr
         # b1,b2,b3 in units of 2pi/a (read in 1/A, so multiply by alat in A)
-        b1=aa.loc[0,2:6:2].to_numpy(float)*self.supercell_multiplier/angstrom_to_bohr
-        b2=aa.loc[1,2:6:2].to_numpy(float)*self.supercell_multiplier/angstrom_to_bohr
-        b3=aa.loc[2,2:6:2].to_numpy(float)*self.supercell_multiplier/angstrom_to_bohr
         print(f"\n The reciprocal lattice vectors in units of 2pi/a:")
         print(b1)
         print(b2)
