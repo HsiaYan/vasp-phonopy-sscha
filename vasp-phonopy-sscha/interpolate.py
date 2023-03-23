@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import cellconstructor as CC
+import cellconstructor.Phonons
 import sys
 import os
 
