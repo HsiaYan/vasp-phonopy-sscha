@@ -100,13 +100,26 @@ class DynamicalMatrixArray():
             os.system("mv qpoints.yaml " + str(1) + ".txt")
 
     def poscar_reader(self):
-        self.supercell_multiplier = pd.read_csv("POSCAR", engine='python', skiprows=1, nrows=1, header=None).values.tolist()[0]
-        self.supercell_multiplier = float(self.supercell_multiplier[0])*angstrom_to_bohr
-        self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=2, nrows=1, header=None).values.tolist()[0])
-        self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=3, nrows=1, header=None).values.tolist()[0])
-        self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=4, nrows=1, header=None).values.tolist()[0])
-        self.type_atoms = pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=5, nrows=1, header=None).values.tolist()[0]
-        self.atom_occurencies = pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=6, nrows=1, header=None).values.tolist()[0]
+        with open("POSCAR", "r", newline="") as POS:
+            self.cell = POS.readlines()
+            self.supercell_multiplier = self.cell[1].strip()
+            self.supercell_multiplier = float(self.supercell_multiplier)*angstrom_to_bohr
+            self.basis_vectors.append(list(map(float, re.findall("[0-9\.]+", self.cell[2]))))
+            self.basis_vectors.append(list(map(float, re.findall("[0-9\.]+", self.cell[3]))))
+            self.basis_vectors.append(list(map(float, re.findall("[0-9\.]+", self.cell[4]))))
+            self.type_atoms = re.findall("[A-Za-z]+", self.cell[5])
+            self.atom_occurencies = list(map(int, re.findall("[0-9]+", self.cell[6])))
+
+# bug! There are POSCAR files that sep does not recognize
+#         self.supercell_multiplier = pd.read_csv("POSCAR", engine='python', skiprows=1, nrows=1, header=None).values.tolist()[0]
+#         self.supercell_multiplier = float(self.supercell_multiplier[0])*angstrom_to_bohr
+#         self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=2, nrows=1, header=None).values.tolist()[0])
+#         self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=3, nrows=1, header=None).values.tolist()[0])
+#         self.basis_vectors.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=4, nrows=1, header=None).values.tolist()[0])
+#         self.type_atoms = pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=5, nrows=1, header=None).values.tolist()[0]
+#         self.atom_occurencies = pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=6, nrows=1, header=None).values.tolist()[0]
+
+        
         for index in range(len(self.atom_occurencies)):
             self.n_atoms += self.atom_occurencies[index]
         for index in range(len(self.type_atoms)):
