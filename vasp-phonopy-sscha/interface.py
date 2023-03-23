@@ -109,7 +109,8 @@ class DynamicalMatrixArray():
             self.basis_vectors.append(list(map(float, re.findall("[0-9\.]+", self.cell[4]))))
             self.type_atoms = re.findall("[A-Za-z]+", self.cell[5])
             self.atom_occurencies = list(map(int, re.findall("[0-9]+", self.cell[6])))
-
+            self.n_atoms = sum(self.atom_occurencies)
+            
 # bug! There are POSCAR files that sep does not recognize
 #         self.supercell_multiplier = pd.read_csv("POSCAR", engine='python', skiprows=1, nrows=1, header=None).values.tolist()[0]
 #         self.supercell_multiplier = float(self.supercell_multiplier[0])*angstrom_to_bohr
@@ -120,13 +121,15 @@ class DynamicalMatrixArray():
 #         self.atom_occurencies = pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=6, nrows=1, header=None).values.tolist()[0]
 
         
-        for index in range(len(self.atom_occurencies)):
-            self.n_atoms += self.atom_occurencies[index]
+#        for index in range(len(self.atom_occurencies)):
+#            self.n_atoms += self.atom_occurencies[index]
         for index in range(len(self.type_atoms)):
             for indey in range(self.atom_occurencies[index]):
-                    self.unit_cell_atoms.append(self.type_atoms[index])
-        for index in range(self.n_atoms):
-            self.atomic_positions.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=8+index, nrows=1, header=None).values.tolist()[0])
+                self.unit_cell_atoms.append(self.type_atoms[index])
+        for index in [x.strip() for x in self.cell[8:] if x.strip() != '']:
+            self.atomic_positions.append(list(map(float, re.findall("[0-9\.]+", i)))) 
+#         for index in range(self.n_atoms):
+#             self.atomic_positions.append(pd.read_csv("POSCAR", engine='python', sep="\s+", skiprows=8+index, nrows=1, header=None).values.tolist()[0])
         self.get_masses()
         self.header = header(self.supercell_multiplier, self.atomic_positions, self.basis_vectors)
         print(f" Supercell multiplier: {self.supercell_multiplier} \n basis_vectors: {self.basis_vectors} \n type_atoms: {self.type_atoms} \n atom_occurencies: {self.atom_occurencies} \n unit_cell_atoms: \n{self.unit_cell_atoms} \n atomic_positions: {self.atomic_positions} \n n_atoms: {self.n_atoms}")
